@@ -1,0 +1,321 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.3
+  name: resourceviewers.protect.trident.netapp.io
+spec:
+  group: protect.trident.netapp.io
+  names:
+    kind: ResourceViewer
+    listKind: ResourceViewerList
+    plural: resourceviewers
+    singular: resourceviewer
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The current state of the ResourceViewer
+      jsonPath: .status.state
+      name: State
+      type: string
+    - description: The message associated with the ResourceViewer
+      jsonPath: .status.message
+      name: Message
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          ResourceViewer is the Schema for the resourceviewers API. It will either do a
+          current point-in-time collection of all the resources that fit the "Definition"
+          specified, or, if an applicationRef in the same namespace as this resource is
+          provided, it will find the lastest snapshot/backup and fetch the protected resources
+          of that object to show in the `status`.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ResourceViewerSpec defines the desired state of ResourceViewer
+            properties:
+              backupRef:
+                description: |-
+                  BackupRef is a reference to a Backup in the same namespace as this resource.
+                  If specified, it will search the AppArchive for the referenced Backup and use
+                  that Backup's application protected resource.
+                type: string
+              definition:
+                description: |-
+                  Definition defines the fields that would also be included in a normal Application
+                  CR definition like `includedNamespaces` and `includedClusterScopedResources`.
+                properties:
+                  includedClusterScopedResources:
+                    description: IncludedClusterScopedResources is a list of cluster-scoped
+                      resource types to be included.
+                    items:
+                      properties:
+                        groupVersionKind:
+                          description: GroupVersionKind unambiguously identifies a
+                            kind
+                          properties:
+                            group:
+                              type: string
+                            kind:
+                              type: string
+                            version:
+                              type: string
+                          type: object
+                        labelSelector:
+                          description: |-
+                            A label selector is a label query over a set of resources. The result of matchLabels and
+                            matchExpressions are ANDed. An empty label selector matches all objects. A null
+                            label selector matches no objects.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      type: object
+                    type: array
+                    x-kubernetes-validations:
+                    - message: Value is immutable
+                      rule: self == oldSelf
+                  includedNamespaces:
+                    description: |-
+                      IncludedNamespaces is a slice of namespaceSelectors to include in
+                      our definition. If both `applicationRef` and `includedNamespaces`
+                      are specified, `applicationRef` will take precendence.
+                    items:
+                      properties:
+                        labelSelector:
+                          description: |-
+                            A label selector is a label query over a set of resources. The result of matchLabels and
+                            matchExpressions are ANDed. An empty label selector matches all objects. A null
+                            label selector matches no objects.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        namespace:
+                          description: Namespace is the name of the namespace to include
+                            in the app definition.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9][a-z0-9-]*[a-z0-9]$
+                          type: string
+                      required:
+                      - namespace
+                      type: object
+                    type: array
+                    x-kubernetes-validations:
+                    - message: Value is immutable
+                      rule: self == oldSelf
+                  resourceFilter:
+                    description: |-
+                      ResourceFilter is an object that is used to include/exclude resources of a particular set of GroupVersionKinds.
+
+                      This field can be set in conjunction with a `SnapshotRef` or `BackupRef` to filter the resources collected
+                      from the AppArchive. This would effectively mimic the behavior of a selective ResourceRestore.
+                    properties:
+                      resourceMatchers:
+                        description: ResourceMatchers is a list of matchers where
+                          each matcher matches one or more resources
+                        items:
+                          properties:
+                            group:
+                              description: Group of the kubernetes resource that has
+                                to be matched
+                              type: string
+                            kind:
+                              description: Kind of the kubernetes resource that has
+                                to be matched
+                              type: string
+                            labelSelectors:
+                              description: |-
+                                LabelSelectors  is used to match resource(s) based on the metadata.labels field of the
+                                kubernetes resource
+                              items:
+                                type: string
+                              type: array
+                            names:
+                              description: Names kubernetes metadata.name field of
+                                the resource(s) that must be matched.
+                              items:
+                                type: string
+                              type: array
+                            namespaces:
+                              description: Namespaces kubernetes metadata.namespace
+                                field of the resource(s) that must be matched.
+                              items:
+                                type: string
+                              type: array
+                            version:
+                              description: Version of the kubernetes resource that
+                                has to be matched.
+                              type: string
+                          type: object
+                        type: array
+                      resourceSelectionCriteria:
+                        description: |-
+                          ResourceSelectionCriteria used to determine if the resources matching the provided resources matchers
+                          should be included into the collection or excluded from the collection.
+                        enum:
+                        - Include
+                        - Exclude
+                        type: string
+                    type: object
+                type: object
+              replicateSnapshotRef:
+                description: |-
+                  ReplicateSnapshotRef is a reference to a ReplicateSnapshot in the same namespace as this resource.
+                  If specified, it will search the AppArchive for the referenced ReplicateSnapshot and use
+                  that ReplicateSnapshot's application protected resource.
+                type: string
+              snapshotRef:
+                description: |-
+                  SnapshotRef is a reference to a Snapshot in the same namespace as this resource.
+                  If specified, it will search the AppArchive for the referenced Snapshot and use
+                  that Snapshot's application protected resource.
+                type: string
+            type: object
+          status:
+            description: ResourceViewerStatus defines the observed state of ResourceViewer
+            properties:
+              completionTime:
+                description: The completion time of the operation.
+                format: date-time
+                type: string
+              currentPart:
+                description: CurrentPart is current part being categorized for the
+                  "data" field.
+                type: integer
+              data:
+                description: Data field is the chunk of data as it pertains to the
+                  current part count.
+                type: string
+              message:
+                description: Any message for processing.
+                type: string
+              startTime:
+                description: The start time of the operation.
+                format: date-time
+                type: string
+              state:
+                description: Current state of the resource. Can be `Done`, `Error`,
+                  or `Running`.
+                enum:
+                - Done
+                - Error
+                - Running
+                type: string
+              totalParts:
+                description: TotalParts is the total amount of parts calculated for
+                  the collected data.
+                type: integer
+            required:
+            - currentPart
+            - data
+            - totalParts
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

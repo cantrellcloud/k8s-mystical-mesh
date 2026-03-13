@@ -1,0 +1,29 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    {{- include "tridentprotect.labels" . | nindent 4 }}
+  name: {{ .Values.namePrefix }}-autosupportbundle
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.namePrefix }}-autosupportbundle
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.namePrefix }}-autosupportbundle
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    {{- include "tridentprotect.labels" . | nindent 4 }}
+  name: {{ .Values.namePrefix }}-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.namePrefix }}-proxy-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.namePrefix }}-controller-manager
+    namespace: {{ .Release.Namespace }}

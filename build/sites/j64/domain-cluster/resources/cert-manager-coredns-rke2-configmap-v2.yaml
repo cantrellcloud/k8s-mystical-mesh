@@ -1,0 +1,41 @@
+# Use with RKE2 Clusters
+# rke2-coredns-rke2-coredns -n kube-system
+apiVersion: v1
+data:
+  Corefile: |-
+    dev.kube:53 {
+        forward . 10.0.1.34 10.231.1.34
+        }
+    .:53 {
+        errors
+        health {
+            lameduck 10s
+        }
+        ready
+        kubernetes  cluster.local  cluster.local in-addr.arpa ip6.arpa {
+            pods insecure
+            fallthrough in-addr.arpa ip6.arpa
+            ttl 30
+        }
+        prometheus  0.0.0.0:9153
+        forward  . /etc/resolv.conf
+        cache  30
+        loop
+        reload
+        loadbalance
+    }
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: rke2-coredns
+    meta.helm.sh/release-namespace: kube-system
+  labels:
+    app.kubernetes.io/instance: rke2-coredns
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: rke2-coredns
+    helm.sh/chart: rke2-coredns-1.43.302
+    k8s-app: kube-dns
+    kubernetes.io/cluster-service: "true"
+    kubernetes.io/name: CoreDNS
+  name: rke2-coredns-rke2-coredns
+  namespace: kube-system

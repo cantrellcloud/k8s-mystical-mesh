@@ -1,0 +1,162 @@
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: j64-keycloak
+  namespace: keycloak
+spec:
+  instances: 1
+
+  # Mirror the Helm deployment behavior (kc.sh start without --optimized).
+  # When using a custom image, the operator may assume the image is already augmented
+  # and default to optimized start unless this is set.
+  startOptimized: false
+
+  # Use the internally mirrored Keycloak image.
+  image: altregistry.dev.kube:8443/library/keycloak:26-debian13-dev
+  #imagePullSecrets:
+  #  - name: j64-keycloak-helm-pull-secret
+
+  # Operator-managed initial admin user (uses the same secret keys as our Helm deployment).
+  bootstrapAdmin:
+    user:
+      secret: j64-keycloak-bootstrap-admin
+
+  # We keep ingress and TLS managed by our own cert-manager + Ingress manifests.
+  ingress:
+    enabled: false
+
+  # Enable HTTP because TLS is terminated at the ingress controller.
+  http:
+    httpEnabled: true
+
+  hostname:
+    hostname: hmkeycloak.hypermute.cloud
+    strict: false
+
+  proxy:
+    headers: xforwarded
+
+  additionalOptions:
+    - name: http-relative-path
+      value: /auth
+    - name: cache
+      value: ispn
+    - name: cache-stack
+      value: jdbc-ping
+    - name: metrics-enabled
+      value: "true"
+    - name: health-enabled
+      value: "true"
+    - name: log-level
+      value: DEBUG
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+  # Advanced pod-spec customizations to mirror the existing Helm StatefulSet.
+  # WARNING: `unsupported.podTemplate` is explicitly non-stable upstream.
+  unsupported:
+    podTemplate:
+      spec:
+        securityContext:
+          fsGroup: 65532
+        initContainers:
+          - name: preprod-import-ca
+            image: altregistry.dev.kube:8443/library/keycloak:26-debian13-dev
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              allowPrivilegeEscalation: false
+              runAsUser: 65532
+              runAsGroup: 65532
+              runAsNonRoot: true
+            command:
+              - sh
+              - -c
+              - |
+                set -euo pipefail
+
+                TRUSTSTORE_DIR=/opt/preprod/truststore
+                TRUSTSTORE=${TRUSTSTORE_DIR}/cacerts
+
+                mkdir -p "${TRUSTSTORE_DIR}"
+
+                # Seed the truststore from the base image (keep default public CAs).
+                if [ -n "${JAVA_HOME:-}" ] && [ -f "${JAVA_HOME}/lib/security/cacerts" ]; then
+                  cp "${JAVA_HOME}/lib/security/cacerts" "${TRUSTSTORE}"
+                elif [ -f /etc/ssl/certs/java/cacerts ]; then
+                  cp /etc/ssl/certs/java/cacerts "${TRUSTSTORE}"
+                elif [ -f /opt/java/openjdk/lib/security/cacerts ]; then
+                  cp /opt/java/openjdk/lib/security/cacerts "${TRUSTSTORE}"
+                else
+                  echo "No base JVM cacerts found; creating new truststore at ${TRUSTSTORE}"
+                fi
+
+                KEYTOOL=keytool
+                if ! command -v keytool >/dev/null 2>&1; then
+                  if [ -n "${JAVA_HOME:-}" ] && [ -x "${JAVA_HOME}/bin/keytool" ]; then
+                    KEYTOOL="${JAVA_HOME}/bin/keytool"
+                  else
+                    echo "ERROR: keytool not found in PATH and JAVA_HOME is not set" >&2
+                    exit 1
+                  fi
+                fi
+
+                for cert in /opt/preprod/ca-certs/*.crt; do
+                  [ -f "${cert}" ] || continue
+                  alias="preprod-$(basename "${cert}" .crt)"
+                  echo "Importing ${cert} as ${alias}"
+                  "${KEYTOOL}" -importcert -noprompt -storepass changeit -keystore "${TRUSTSTORE}" -alias "${alias}" -file "${cert}" || true
+                done
+            volumeMounts:
+              - name: preprod-truststore
+                mountPath: /opt/preprod/truststore
+              - name: preprod-ca-certs
+                mountPath: /opt/preprod/ca-certs
+                readOnly: true
+
+        volumes:
+          - name: preprod-ca-certs
+            secret:
+              secretName: preprod-ca-bundle
+          - name: preprod-truststore
+            emptyDir: {}
+          - name: keycloak-preprod-keytab
+            secret:
+              secretName: keycloak-preprod-keytab
+              items:
+                - key: keycloak.preprod.keytab
+                  path: keycloak.preprod.keytab
+          # Themes PVC (created by our operator resources manifest).
+          - name: themes
+            persistentVolumeClaim:
+              claimName: j64-keycloak-themes
+
+        containers:
+          - name: keycloak
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65532
+            # Override the operator's default args so we match Helm behavior:
+            # run `kc.sh start` without `--optimized`, allowing Keycloak to perform
+            # its build/augmentation step on first start.
+            args:
+              - start
+              - --verbose
+            env:
+              - name: JAVA_OPTS
+                value: "-Xms256m -Xmx768m -Djavax.net.ssl.trustStore=/opt/preprod/truststore/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+            volumeMounts:
+              - name: preprod-truststore
+                mountPath: /opt/preprod/truststore
+                readOnly: true
+              - name: themes
+                mountPath: /opt/keycloak/themes
+              - name: keycloak-preprod-keytab
+                mountPath: /etc/krb5.keytab
+                subPath: keycloak.preprod.keytab
+                readOnly: true

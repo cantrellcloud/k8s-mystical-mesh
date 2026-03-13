@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: prom-remote-write-client
+  namespace: monitoring
+spec:
+  secretName: prom-remote-write-client-tls
+  commonName: prom-remote-write-client-j52domain
+  issuerRef:
+    name: preprod-ca-clusterissuer
+    kind: ClusterIssuer
+  usages:
+  - digital signature
+  - key encipherment
+  - client auth
+---

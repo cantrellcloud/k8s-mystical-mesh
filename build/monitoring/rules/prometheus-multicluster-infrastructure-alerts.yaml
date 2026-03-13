@@ -1,0 +1,228 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: prom-rules-infrastructure
+  namespace: monitoring
+  labels:
+    release: prometheus
+    role: infrastructure-alerts
+spec:
+  groups:
+  # NATS Alerts
+  - name: nats.rules
+    rules:
+    - alert: NATSServerDown
+      expr: up{job="nats-exporter"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        service: nats
+      annotations:
+        summary: "NATS server down (cluster={{ $labels.cluster }})"
+        description: "NATS server has been down for more than 5 minutes."
+
+    - alert: NATSSlowConsumers
+      expr: nats_varz_slow_consumers > 0
+      for: 5m
+      labels:
+        severity: warning
+        service: nats
+      annotations:
+        summary: "NATS slow consumers detected (cluster={{ $labels.cluster }})"
+        description: "{{ $value }} slow consumers detected on NATS server."
+
+    - alert: NATSHighMessageRate
+      expr: rate(nats_varz_in_msgs[5m]) > 10000
+      for: 10m
+      labels:
+        severity: info
+        service: nats
+      annotations:
+        summary: "NATS high message rate (cluster={{ $labels.cluster }})"
+        description: "NATS is processing {{ $value }} msgs/sec, which is unusually high."
+
+    - alert: NATSConnectionsHigh
+      expr: nats_varz_connections > 1000
+      for: 10m
+      labels:
+        severity: warning
+        service: nats
+      annotations:
+        summary: "NATS high connection count (cluster={{ $labels.cluster }})"
+        description: "NATS has {{ $value }} active connections."
+
+  # Contour/Envoy Alerts
+  - name: contour.rules
+    rules:
+    - alert: ContourBackendUnhealthy
+      expr: envoy_cluster_membership_healthy < 1
+      for: 5m
+      labels:
+        severity: critical
+        service: contour
+      annotations:
+        summary: "Contour backend unhealthy (cluster={{ $labels.cluster }}, backend={{ $labels.envoy_cluster_name }})"
+        description: "Envoy cluster has no healthy backends."
+
+    - alert: ContourHighErrorRate
+      expr: |
+        sum(rate(envoy_http_downstream_rq_xx{envoy_response_code_class="5"}[5m]))
+        /
+        sum(rate(envoy_http_downstream_rq_total[5m]))
+        > 0.05
+      for: 5m
+      labels:
+        severity: critical
+        service: contour
+      annotations:
+        summary: "Contour high 5xx error rate (cluster={{ $labels.cluster }})"
+        description: "Contour is experiencing {{ $value | humanizePercentage }} 5xx errors."
+
+    - alert: ContourHighLatency
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(envoy_http_downstream_rq_time_bucket[5m])) by (le, cluster)
+        ) > 1000
+      for: 10m
+      labels:
+        severity: warning
+        service: contour
+      annotations:
+        summary: "Contour high latency (cluster={{ $labels.cluster }})"
+        description: "95th percentile request latency is {{ $value }}ms."
+
+  # Istio Control Plane Alerts
+  - name: istio-control-plane.rules
+    rules:
+    - alert: IstiodDown
+      expr: up{job="istiod"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        service: istio
+      annotations:
+        summary: "Istiod down (cluster={{ $labels.cluster }})"
+        description: "Istiod control plane has been down for more than 5 minutes."
+
+    - alert: IstioPilotPushErrors
+      expr: rate(pilot_xds_push_errors[5m]) > 0.05
+      for: 10m
+      labels:
+        severity: warning
+        service: istio
+      annotations:
+        summary: "Istio Pilot push errors (cluster={{ $labels.cluster }})"
+        description: "Pilot is experiencing {{ $value }} push errors/sec."
+
+    - alert: IstioCertificateExpiringSoon
+      expr: (citadel_server_root_cert_expiry_timestamp - time()) < 86400 * 30
+      for: 1h
+      labels:
+        severity: warning
+        service: istio
+      annotations:
+        summary: "Istio root certificate expiring soon (cluster={{ $labels.cluster }})"
+        description: "Istio root certificate will expire in {{ $value | humanizeDuration }}."
+
+    - alert: IstioProxyVersionMismatch
+      expr: count(count by (istio_version) (istio_build)) > 1
+      for: 1h
+      labels:
+        severity: warning
+        service: istio
+      annotations:
+        summary: "Multiple Istio proxy versions detected"
+        description: "{{ $value }} different Istio versions are running in the mesh."
+
+  # Storage Alerts
+  - name: storage.rules
+    rules:
+    - alert: PersistentVolumeNearFull
+      expr: |
+        (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) > 0.85
+      for: 10m
+      labels:
+        severity: warning
+        service: storage
+      annotations:
+        summary: "Persistent volume near full (volume={{ $labels.persistentvolumeclaim }})"
+        description: "Volume {{ $labels.persistentvolumeclaim }} is {{ $value | humanizePercentage }} full."
+
+    - alert: PersistentVolumeFull
+      expr: |
+        (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) > 0.95
+      for: 5m
+      labels:
+        severity: critical
+        service: storage
+      annotations:
+        summary: "Persistent volume critical (volume={{ $labels.persistentvolumeclaim }})"
+        description: "Volume {{ $labels.persistentvolumeclaim }} is {{ $value | humanizePercentage }} full."
+
+    - alert: TridentBackendUnhealthy
+      expr: trident_backend_state != 1
+      for: 5m
+      labels:
+        severity: critical
+        service: storage
+      annotations:
+        summary: "Trident backend unhealthy (backend={{ $labels.backend }})"
+        description: "Trident storage backend is not in healthy state."
+
+  # cert-manager Alerts
+  - name: cert-manager.rules
+    rules:
+    - alert: CertManagerCertificateExpiringSoon
+      expr: |
+        (certmanager_certificate_expiration_timestamp_seconds - time()) < 86400 * 30
+      for: 1h
+      labels:
+        severity: warning
+        service: cert-manager
+      annotations:
+        summary: "Certificate expiring soon (certificate={{ $labels.name }})"
+        description: "Certificate {{ $labels.name }} will expire in {{ $value | humanizeDuration }}."
+
+    - alert: CertManagerCertificateExpired
+      expr: |
+        (certmanager_certificate_expiration_timestamp_seconds - time()) < 0
+      for: 5m
+      labels:
+        severity: critical
+        service: cert-manager
+      annotations:
+        summary: "Certificate expired (certificate={{ $labels.name }})"
+        description: "Certificate {{ $labels.name }} has expired."
+
+    - alert: CertManagerACMEAccountRegistrationFailed
+      expr: rate(certmanager_http_acme_client_request_count{status=~"4.."}[5m]) > 0
+      for: 10m
+      labels:
+        severity: warning
+        service: cert-manager
+      annotations:
+        summary: "cert-manager ACME registration failures"
+        description: "cert-manager is experiencing ACME registration failures."
+
+  # MongoDB Operator Alerts
+  - name: mongodb-operator.rules
+    rules:
+    - alert: MongoDBOperatorDown
+      expr: up{job="mongodb-operator"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        service: mongodb
+      annotations:
+        summary: "MongoDB Operator down"
+        description: "MongoDB Kubernetes Operator has been down for more than 5 minutes."
+
+    - alert: MongoDBOperatorReconcileErrors
+      expr: rate(mongodb_operator_reconcile_errors_total[5m]) > 0
+      for: 10m
+      labels:
+        severity: warning
+        service: mongodb
+      annotations:
+        summary: "MongoDB Operator reconcile errors"
+        description: "MongoDB Operator is experiencing reconcile errors at {{ $value }} errors/sec."

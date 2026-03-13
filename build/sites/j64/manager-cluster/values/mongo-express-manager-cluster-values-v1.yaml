@@ -1,0 +1,30 @@
+global:
+  imageRegistry: "altregistry.dev.kube:8443/library"
+  imagePullSecrets: []
+replicaCount: 1
+image:
+  tag: 1.0.2
+  pullPolicy: IfNotPresent
+service:
+  type: NodePort
+  ports:
+    http: 8081
+  nodePorts:
+    http: 30081
+#mongodbServer: rocketchat-svc.mongodb.svc.cluster.local
+#mongodbPort: 27017
+#mongodbEnableAdmin: true
+#mongodbAdminUsername: rootadmin
+#mongodbAdminPassword: ""
+#existingSecretKeyMongodbAdminPassword: rocketchat-rootadmin-credentials
+extraEnvVars:
+  - name: ME_CONFIG_MONGODB_ENABLE_ADMIN
+    value: "true"
+  - name: ME_CONFIG_MONGODB_SERVER
+    value: "mongo-mongodb-headless.mongodb.svc.cluster.local"
+  - name: ME_CONFIG_MONGODB_PORT
+    value: "27017"
+  - name: ME_CONFIG_MONGODB_ADMINUSERNAME
+    value: "rootadmin"
+  - name: ME_CONFIG_MONGODB_ADMINPASSWORD
+    value: "g5BqsA4AXrxnQPKhFD34"

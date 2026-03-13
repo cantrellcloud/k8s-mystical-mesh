@@ -1,0 +1,37 @@
+---
+# rocketchat-dbuser-rktadmin-credentials
+apiVersion: v1
+data:
+  password: VXpGaGFYSmhjbTl6WlRnNU5Rb2Q=
+kind: Secret
+metadata:
+  name: rocketchat-db-dbuser-rktadmin-credentials
+  namespace: mongodb
+type: Opaque
+---
+# rocketchat-dbuser-rktadmin
+apiVersion: mongodb.com/v1
+kind: MongoDBUser
+metadata:
+  name: rocketchat-db-dbuser-rktadmin
+  namespace: mongodb
+spec:
+  username: rktadmin
+  connectionStringSecretName: rocketchat-db-dbuser-rktadmin-secret
+  db: admin
+  passwordSecretKeyRef:
+    name: rocketchat-db-dbuser-rktadmin-credentials
+    key: password
+  mongodbResourceRef:
+    name: rocketchat-db
+  roles:
+    - db: admin
+      name: restore
+    - db: admin
+      name: readWrite
+    - db: rocketchat
+      name: dbOwner
+    - db: rocketchat
+      name: readWrite
+    - db: local
+      name: readWrite

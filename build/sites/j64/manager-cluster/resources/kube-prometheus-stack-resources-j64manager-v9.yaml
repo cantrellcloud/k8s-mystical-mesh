@@ -1,0 +1,161 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana-cert
+  namespace: monitoring
+spec:
+  secretName: grafana-tls
+  issuerRef:
+    name: preprod-ca-clusterissuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  commonName: j64manager-grafana.dev.kube
+  dnsNames:
+  - j64manager-grafana.dev.kube
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: monitoring
+  annotations:
+    projectcontour.io/websocket-routes: /*
+spec:
+  tls:
+  - hosts:
+    - j64manager-grafana.dev.kube
+    secretName: grafana-tls
+  rules:
+  - host: j64manager-grafana.dev.kube
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: prometheus-grafana
+            port:
+              number: 80
+  ingressClassName: contour
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: alertmanager-cert
+  namespace: monitoring
+spec:
+  secretName: alertmanager-tls
+  issuerRef:
+    name: preprod-ca-clusterissuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  commonName: j64manager-alerts.dev.kube
+  dnsNames:
+  - j64manager-alerts.dev.kube
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alertmanager-ingress
+  namespace: monitoring
+  annotations:
+    projectcontour.io/websocket-routes: /*
+spec:
+  tls:
+  - hosts:
+    - j64manager-alerts.dev.kube
+    secretName: alertmanager-tls
+  rules:
+  - host: j64manager-alerts.dev.kube
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: j64manager-alertmanager
+            port:
+              number: 9093
+  ingressClassName: contour
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: prom-remote-write-server
+  namespace: monitoring
+spec:
+  secretName: prom-remote-write-server-tls
+  commonName: j64manager-prometheus-rw.dev.kube
+  dnsNames:
+  - j64manager-prometheus-rw.dev.kube
+  issuerRef:
+    name: preprod-ca-clusterissuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  usages:
+  - digital signature
+  - key encipherment
+  - server auth
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: prometheus-remote-write
+  namespace: monitoring
+spec:
+  virtualhost:
+    fqdn: j64manager-prometheus-rw.dev.kube
+    tls:
+      secretName: prom-remote-write-server-tls
+      clientValidation:
+        caSecret: preprod-ca-bundle
+  routes:
+  - conditions:
+    - prefix: /api/v1/write
+    services:
+    - name: j64manager-prometheus
+      port: 9090
+    timeoutPolicy:
+      response: infinity
+      idle: 5m
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: prometheus-cert
+  namespace: monitoring
+spec:
+  secretName: prometheus-tls
+  issuerRef:
+    name: preprod-ca-clusterissuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  commonName: j64manager-prometheus.dev.kube
+  dnsNames:
+  - j64manager-prometheus.dev.kube
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus-ingress
+  namespace: monitoring
+  annotations:
+    projectcontour.io/websocket-routes: /*
+spec:
+  tls:
+  - hosts:
+    - j64manager-prometheus.dev.kube
+    secretName: prometheus-tls
+  rules:
+  - host: j64manager-prometheus.dev.kube
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: j64manager-prometheus
+            port:
+              number: 9090
+  ingressClassName: contour
+---

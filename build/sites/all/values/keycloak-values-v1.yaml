@@ -1,0 +1,90 @@
+# ------------------------------------------------------------
+# Keycloak (Bitnami chart) - lab defaults + Longhorn persistence
+# Database: chart-managed PostgreSQL on Longhorn
+# Metrics: disabled (temporary)
+# TLS/Ingress: managed externally (cert-manager + Ingress)
+# ------------------------------------------------------------
+
+# Allow deploying non-standard / mirrored images when intentional.
+# See: https://github.com/bitnami/charts/issues/30850
+global:
+  security:
+    allowInsecureImages: true
+
+auth:
+  adminUser: "admin"
+  existingSecret: "keycloak-admin-secret"
+  passwordSecretKey: "admin-password"
+
+production: true
+proxyHeaders: "xforwarded"
+httpRelativePath: "/"
+
+replicaCount: 1
+
+pdb:
+  create: true
+  minAvailable: 1
+
+service:
+  type: ClusterIP
+  http:
+    enabled: true
+  ports:
+    http: 80
+
+ingress:
+  enabled: false
+
+tls:
+  enabled: false
+
+# ------------------------------------------------------------
+# Keycloak persistence (optional)
+# Usually not required if DB is persistent, but harmless for things like themes/providers.
+# ------------------------------------------------------------
+persistence:
+  enabled: false
+  storageClass: "longhorn"
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+
+# ------------------------------------------------------------
+# Database: bundled PostgreSQL on Longhorn
+# ------------------------------------------------------------
+postgresql:
+  enabled: true
+  architecture: standalone
+
+  auth:
+    # Best practice: use a Secret so creds don’t live in Git
+    existingSecret: "keycloak-postgres-secret"
+    secretKeys:
+      adminPasswordKey: "postgres-password"
+      userPasswordKey: "postgresql-password"
+      replicationPasswordKey: "replication-password"
+
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "longhorn"
+      accessModes:
+        - ReadWriteOnce
+      size: 10Gi
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "64Mi"
+  limits:
+    cpu: "2"
+    memory: "512Mi"
+
+metrics:
+  enabled: false
+
+networkPolicy:
+  enabled: true
+  allowExternal: true
+  allowExternalEgress: true

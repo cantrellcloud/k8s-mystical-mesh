@@ -1,0 +1,217 @@
+global:
+  imageRegistry: altregistry.dev.kube:8443/library
+image:
+  repository: altregistry.dev.kube:8443/library/rocketchat/rocket.chat
+  tag: 7.13.1
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+host: rocket.dev.local
+replicaCount: 3
+minAvailable: 3
+
+extraVolumes:
+  - name: rocketchat-mongodb-ca
+    secret:
+      secretName: rocketchat-mongodb-ca-secret
+
+extraVolumeMounts:
+  - name: rocketchat-mongodb-ca
+    mountPath: /etc/ssl/mongo
+    readOnly: true
+
+existingMongodbSecret: rocketchat-rktservice-credentials
+
+extraEnv: 
+  - name: INSTANCE_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: OVERWRITE_SETTING_Show_Setup_Wizard
+    value: "completed"
+  - name: OVERWRITE_SETTING_Site_Url
+    value: "https://rocket.dev.local"
+  - name: MONGO_OPTIONS
+    value: >-
+      {
+        "ssl": "true",
+        "tlsCAFile": "/etc/ssl/mongo/ca.pem"
+      }
+
+mongodb:
+  enabled: false
+
+persistence:
+  enabled: false
+  accessMode: ReadWriteOnce
+  size: 10Gi
+
+resources:
+  requests:
+    memory: 2048Mi
+    cpu: 250m
+  limits:
+    memory: 4Gi
+    cpu: 2
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/instance
+              operator: In
+              values: ["rocketchat"]
+            - key: app.kubernetes.io/name
+              operator: In
+              values: ["rocketchat"]
+        topologyKey: "kubernetes.io/hostname"
+
+ingress:
+  enabled: false
+
+service:
+  annotations: {}
+  labels: {}
+  type: ClusterIP
+  port: 80
+
+microservices:
+  logLevel: debug
+  enabled: true
+  ## Parameters for each deployment:
+  presence:
+    replicas: 2
+    image:
+      repository: altregistry.dev.kube:8443/library/rocketchat/presence-service
+      tag: 7.13.1
+      pullPolicy: IfNotPresent
+    securityContext: {}
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+    tolerations: []
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: rocketchat
+                  app.kubernetes.io/name: presence
+              topologyKey: "kubernetes.io/hostname"
+
+  ddpStreamer:
+    replicas: 2
+    image:
+      repository: altregistry.dev.kube:8443/library/rocketchat/ddp-streamer-service
+      tag: 7.13.1
+      pullPolicy: IfNotPresent
+    securityContext: {}
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 500m
+      limits:
+        memory: 1Gi
+        cpu: 2
+    tolerations: []
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: rocketchat
+                  app.kubernetes.io/name: ddp-streamer
+              topologyKey: "kubernetes.io/hostname"
+
+  account:
+    replicas: 2
+    image:
+      repository: altregistry.dev.kube:8443/library/rocketchat/account-service
+      tag: 7.13.1
+      pullPolicy: IfNotPresent
+    securityContext: {}
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+    tolerations: []
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: rocketchat
+                  app.kubernetes.io/name: account
+              topologyKey: "kubernetes.io/hostname"
+
+  authorization:
+    replicas: 2
+    image:
+      repository: altregistry.dev.kube:8443/library/rocketchat/authorization-service
+      tag: 7.13.1
+      pullPolicy: IfNotPresent
+    securityContext: {}
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+    tolerations: []
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: rocketchat
+                  app.kubernetes.io/name: authorization
+              topologyKey: "kubernetes.io/hostname"
+
+  streamHub:
+    replicas: 2
+    image:
+      repository: altregistry.dev.kube:8443/library/rocketchat/stream-hub-service
+      tag: 7.13.1
+      pullPolicy: IfNotPresent
+    securityContext: {}
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+    tolerations: []
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: rocketchat
+                  app.kubernetes.io/name: stream-hub
+              topologyKey: "kubernetes.io/hostname"
+
+nats:
+  enabled: false
+  existingSecret:
+    name: nats-cluster-secret
+    key: nats-url

@@ -1,0 +1,98 @@
+global:
+  imageRegistry: "altregistry.dev.kube:8443/library"
+  imagePullSecrets: []
+  defaultStorageClass: "tkg-work-storage-latebinding"
+  storageClass: "tkg-work-storage-latebinding"
+  security:
+    allowInsecureImages: true
+
+contour:
+  enabled: true
+  image:
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  replicaCount: 1
+  resources: {}
+  podAffinityPreset: ""
+  podAntiAffinityPreset: soft
+  nodeAffinityPreset:
+    type: ""
+    key: ""
+    values: []
+  affinity: {}
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    fsGroup: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    capabilities:
+      drop:
+      - ALL
+    seccompProfile:
+      type: RuntimeDefault
+
+envoy:
+  enabled: true
+  image:
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  kind: daemonset
+  replicaCount: 1
+  podAffinityPreset: ""
+  podAntiAffinityPreset: ""
+  nodeAffinityPreset:
+    type: ""
+    key: ""
+    values: []
+  affinity: {}
+  service:
+    type: LoadBalancer
+    loadBalancerIP: "10.0.4.45"
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    fsGroup: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    capabilities:
+      drop:
+      - ALL
+      add:
+      - NET_BIND_SERVICE
+    seccompProfile:
+      type: RuntimeDefault
+
+metrics:
+  serviceMonitor:
+    namespace: monitoring
+    enabled: true
+    jobLabel: "app.kubernetes.io/name"
+    interval: 30s
+    metricRelabelings: []
+    relabelings: []
+    honorLabels: false
+    scrapeTimeout: 10s
+    selector: {}
+    labels:
+      release: prometheus
+  prometheusRule:
+    enabled: true
+    namespace: monitoring
+    additionalLabels:
+      release: prometheus
+    rules:
+    - alert: ContourBackendUnhealthy
+      expr: envoy_cluster_membership_healthy{envoy_cluster_name=~".*"} < 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Contour backend unhealthy"
+        description: "Envoy cluster {{ $labels.envoy_cluster_name }} has no healthy backends"

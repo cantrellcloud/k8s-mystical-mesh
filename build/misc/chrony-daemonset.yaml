@@ -1,0 +1,115 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: chrony-client
+  namespace: kube-system
+  labels:
+    app: chrony-client
+    component: time-sync
+spec:
+  selector:
+    matchLabels:
+      app: chrony-client
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: chrony-client
+        component: time-sync
+    spec:
+      # Required to access host PID namespace for init container
+      hostPID: true
+      # Required to use host network for NTP (UDP/123)
+      hostNetwork: true
+      # Run on all nodes including control plane
+      tolerations:
+      - operator: Exists
+      initContainers:
+      # Disable systemd-timesyncd to prevent conflicts with chrony
+      - name: disable-timesyncd
+        image: altregistry.dev.kube:8443/library/ultimate-k8s-toolbox:v1.0.1
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+          runAsUser: 0
+        command: ["/bin/bash", "-lc"]
+        args:
+          - |
+            set -e
+            echo "Disabling systemd-timesyncd to prevent conflicts..."
+            nsenter -t 1 -m -u -i -n -p -- systemctl stop systemd-timesyncd || true
+            nsenter -t 1 -m -u -i -n -p -- systemctl disable systemd-timesyncd || true
+            nsenter -t 1 -m -u -i -n -p -- timedatectl set-ntp false || true
+            echo "systemd-timesyncd disabled successfully"
+      containers:
+      - name: chrony
+        image: altregistry.dev.kube:8443/library/chrony-air-gapped:v0.1.4
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          capabilities:
+            add:
+            - SYS_TIME    # Required to set system time
+            - SYS_NICE    # Required for scheduling priority
+            - NET_ADMIN   # Required for network configuration
+        env:
+        # Space or comma-separated list of NTP servers
+        - name: NTP_SERVERS
+          value: "10.231.0.1"
+        # Log level: 0=info, 1=warn, 2=error, 3=fatal
+        - name: LOG_LEVEL
+          value: "0"
+        # Optional: Node name for identification in logs
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - chronyc tracking | grep -q "Reference ID"
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - chronyc tracking | grep -q "Leap status"
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+      # Optional: Node selector to target specific nodes
+      # nodeSelector:
+      #   node-role.kubernetes.io/worker: "true"
+      # Optional: Priority class for critical system pods
+      # priorityClassName: system-node-critical
+---
+## ConfigMap for multiple NTP server configurations (optional)
+#apiVersion: v1
+#kind: ConfigMap
+#metadata:
+#  name: chrony-config
+#  namespace: kube-system
+#data:
+#  # Primary NTP servers (used by default)
+#  ntp-servers: "10.231.0.1"
+#  # Alternative configurations for different environments
+#  ntp-servers-dev: "10.0.1.34,10.0.1.35"
+#  ntp-servers-prod: "10.231.0.1,10.231.0.2"

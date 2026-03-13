@@ -1,0 +1,6 @@
+imageRegistry: "altregistry.dev.kube:8443/library/netapp"
+imagePullPolicy: Always
+tridentSilenceAutosupport: true
+tridentLogFormat: "text"
+tridentDisableAuditLog: true
+---

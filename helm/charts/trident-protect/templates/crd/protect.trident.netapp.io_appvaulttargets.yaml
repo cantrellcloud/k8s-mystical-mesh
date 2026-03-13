@@ -1,0 +1,152 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.3
+  name: appvaulttargets.protect.trident.netapp.io
+spec:
+  group: protect.trident.netapp.io
+  names:
+    kind: AppVaultTargets
+    listKind: AppVaultTargetsList
+    plural: appvaulttargets
+    shortNames:
+    - avt
+    singular: appvaulttargets
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The current state of the AppVaultTargets
+      jsonPath: .status.state
+      name: State
+      type: string
+    - description: The error associated with the AppVaultTargets
+      jsonPath: .status.error
+      name: Error
+      type: string
+    - description: The message associated with the AppVaultTargets
+      jsonPath: .status.message
+      name: Message
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: AppVaultTargets is the Schema for the appvaulttargets API (only
+          available with NetApp Backup and Recovery service)
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AppVaultTargetsSpec defines the desired state of AppVaultTargets
+            properties:
+              appVaults:
+                description: AppVaults is a list of AppVaultTarget that are used for
+                  storing snapshots, backups, or replication data
+                items:
+                  description: AppVaultTarget defines the target AppVault for storing
+                    snapshots, backups, or replication data
+                  properties:
+                    appVaultRef:
+                      description: AppVaultRef is the reference to the AppVault
+                      minLength: 1
+                      type: string
+                    purpose:
+                      description: Purpose is the purpose of the AppVaultTarget
+                      enum:
+                      - Snapshot
+                      - Backup
+                      - Replication
+                      type: string
+                  required:
+                  - appVaultRef
+                  - purpose
+                  type: object
+                type: array
+              applicationRef:
+                description: |-
+                  ApplicationRef is the reference to the Application
+                  for which the appVaultTargets will be used.
+                type: string
+              replicationTarget:
+                description: ReplicationTarget is a reference to the target information
+                  that will be used for replication volumes
+                properties:
+                  aggregates:
+                    description: |-
+                      Aggregates is a list of the aggregates on the target SVM.
+                      If no aggregate is provided the default aggregate for the SVM will be used
+                    items:
+                      type: string
+                    type: array
+                  prefix:
+                    description: Prefix is the prefix for the replication volume name
+                    type: string
+                  suffix:
+                    description: Suffix is the suffix for the replication volume name
+                    type: string
+                  svm:
+                    description: SVM is the name of the target SVM that exists on
+                      the target system
+                    type: string
+                  systemID:
+                    description: SystemID is the ID for the target system where replications
+                      will be stored
+                    type: string
+                  systemName:
+                    description: SystemName is the name of the target system where
+                      replications will be stored
+                    type: string
+                required:
+                - svm
+                - systemID
+                - systemName
+                type: object
+            required:
+            - appVaults
+            - applicationRef
+            - replicationTarget
+            type: object
+          status:
+            description: AppVaultTargetsStatus defines the observed state of AppVaultTargets
+            properties:
+              error:
+                description: Error indicates the most recent error that has occurred.
+                  The error may not be permanent, so progress may continue after temporarily
+                  seeing an error.
+                type: string
+              message:
+                description: Message is a message indicating details about the current
+                  state of the AppVaultTargets
+                type: string
+              state:
+                description: State is the current state of the AppVaultTargets
+                enum:
+                - Available
+                - Terminating
+                - Error
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

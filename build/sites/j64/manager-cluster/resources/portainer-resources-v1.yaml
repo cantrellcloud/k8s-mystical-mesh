@@ -1,0 +1,38 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: portainer-cert
+  namespace: portainer
+spec:
+  secretName: portainer-tls
+  issuerRef:
+    name: preprod-ca-clusterissuer
+    kind: ClusterIssuer
+  commonName: portainer.dev.kube
+  dnsNames:
+    - portainer.dev.kube
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: portainer-ingress
+  namespace: portainer
+  annotations:
+    projectcontour.io/force-ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - portainer.dev.kube
+    secretName: portainer-tls
+  rules:
+  - host: portainer.dev.kube
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: portainer
+            port:
+              number: 9000
+  ingressClassName: contour

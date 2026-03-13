@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-bootstrap
+  namespace: keycloak
+  labels:
+    app.kubernetes.io/name: keycloak-bootstrap
+    app.kubernetes.io/component: bootstrap-job
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak-bootstrap
+        app.kubernetes.io/component: bootstrap-job
+    spec:
+      serviceAccountName: keycloak-bootstrap
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: quay.io/keycloak/keycloak:26.0.0
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/bootstrap/bootstrap.sh"]
+          envFrom:
+            - secretRef:
+                name: keycloak-bootstrap-admin
+            - secretRef:
+                name: keycloak-bootstrap-ldap
+          volumeMounts:
+            - name: bootstrap-script
+              mountPath: /bootstrap
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+      volumes:
+        - name: bootstrap-script
+          configMap:
+            name: keycloak-bootstrap-script
+            defaultMode: 0755

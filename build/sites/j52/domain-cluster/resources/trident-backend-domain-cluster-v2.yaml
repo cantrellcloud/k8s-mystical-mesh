@@ -1,0 +1,24 @@
+# create nfs install
+apiVersion: v1
+kind: Secret
+metadata:
+  name: optixsvm-secret
+type: Opaque
+stringData:
+  username: vsadmin
+  password: "ZAQwsx!@#$%12345"
+---
+apiVersion: trident.netapp.io/v1
+kind: TridentBackendConfig
+metadata:
+  name: optix-nfs-backend
+spec:
+  version: 1
+  storageDriverName: ontap-nas
+  managementLIF: tridentsvm.dev.kube
+  dataLIF: tridentsvm-data.dev.kube
+  backendName: optix-nfs-backend
+  svm: tridentSVM
+  autoExportPolicy: true
+  credentials:
+    name: optixsvm-secret

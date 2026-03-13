@@ -1,0 +1,36 @@
+annotations:
+  artifacthub.io/category: integration-delivery
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/license: MIT
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/signKey: |
+    fingerprint: ""
+    url: ""
+apiVersion: v2
+appVersion: 1.0.1
+description: 'A comprehensive Kubernetes administration workstation with 50+ pre-installed
+  tools for debugging, troubleshooting, and managing Kubernetes clusters. Supports
+  air-gapped deployments, custom CA certificates, and multi-architecture builds (amd64/arm64). '
+home: https://github.com/cantrellr/ultimate-k8s-toolbox
+icon: https://raw.githubusercontent.com/cantrellr/ultimate-k8s-toolbox/main/docs/icon.png
+keywords:
+- kubernetes
+- toolbox
+- kubectl
+- helm
+- debugging
+- troubleshooting
+- air-gapped
+- offline
+- k9s
+- devops
+- sre
+- platform-engineering
+maintainers:
+- name: Cantrell R
+  url: https://github.com/cantrellr
+name: ultimate-k8s-toolbox
+sources:
+- https://github.com/cantrellr/ultimate-k8s-toolbox
+type: application
+version: 1.0.1

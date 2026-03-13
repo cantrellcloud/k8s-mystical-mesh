@@ -1,0 +1,289 @@
+global:
+  rbac:
+    create: true
+  imageRegistry: altregistry.dev.kube:8443/library
+  imagePullSecrets: []
+crds:
+  enabled: true
+nameOverride: j64manager
+fullnameOverride: j64manager
+prometheusOperator:
+  enabled: true
+  fullnameOverride: j64manager
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    retention: 120h
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: tkg-work-storage-iscsi-latebinding
+          resources:
+            requests:
+              storage: 120Gi
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      fsGroup: 2000
+      seccompProfile:
+        type: RuntimeDefault
+    containers:
+      - name: alertmanager
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+prometheus:
+  enabled: true
+  prometheusSpec:
+    replicas: 1
+    #prometheusExternalLabelName: prometheus
+    #replicaExternalLabelName: "j64manager"
+    #externalLabels:
+    #  cluster: j64manager
+    enableRemoteWriteReceiver: true
+    enableFeatures:
+    - remote-write-receiver
+    externalUrl: "https://j64manager-prometheus-rw.dev.kube/api/v1/write"
+    additionalScrapeConfigs:
+    - job_name: kubernetes
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_pod_annotation_prometheus_io_scrape
+        action: keep
+        regex: true
+      - target_label: cluster
+        replacement: j64manager
+    scrapeInterval: 15s
+    scrapeTimeout: 10s
+    evaluationInterval: 15s
+    retention: 8d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: tkg-work-storage-iscsi-latebinding
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 150Gi
+    resources:
+      requests:
+        cpu: 1
+        memory: 4Gi
+      limits:
+      # cpu: 10
+        memory: 12Gi
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      fsGroup: 2000
+      seccompProfile:
+        type: RuntimeDefault
+    containers:
+      - name: prometheus
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+  additionalServiceMonitors:
+  - name: rocketchat
+    namespaceSelector:
+      matchNames:
+      - rocketchat
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: rocketchat
+    endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+  - name: mongodb-rocketchat
+    namespaceSelector:
+      matchNames:
+      - mongodb
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: mongodb-exporter
+        app.kubernetes.io/instance: rocketchat
+    endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+  - name: metallb-controller
+    namespaceSelector:
+      matchNames:
+      - metallb-system
+    selector:
+      matchLabels:
+        app.kubernetes.io/component: controller
+    endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 30s
+  - name: metallb-speaker
+    namespaceSelector:
+      matchNames:
+      - metallb-system
+    selector:
+      matchLabels:
+        app.kubernetes.io/component: speaker
+    endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 30s
+  - name: nats-exporter
+    namespaceSelector:
+      matchNames:
+      - nats-system
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: prometheus-nats-exporter
+    endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 15s
+  - name: cert-manager
+    namespaceSelector:
+      matchNames:
+      - cert-manager
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: cert-manager
+    endpoints:
+    - port: tcp-prometheus
+      path: /metrics
+      interval: 30s
+  - name: contour
+    namespaceSelector:
+      matchNames:
+      - contour
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: contour
+    endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+  - name: istiod
+    namespaceSelector:
+      matchNames:
+      - istio-system
+    selector:
+      matchLabels:
+        app: istiod
+        istio.io/rev: stable
+    endpoints:
+    - port: http-monitoring
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+  - name: istio-eastwestgateway
+    namespaceSelector:
+      matchNames:
+      - istio-system
+    selector:
+      matchExpressions:
+      - key: istio
+        operator: Exists
+    endpoints:
+    - port: http-envoy-prom
+      path: /stats/prometheus
+      interval: 15s
+      scrapeTimeout: 10s
+  additionalPodMonitors:
+  - name: istio-proxies
+    namespaceSelector:
+      any: true
+    selector:
+      matchLabels:
+        istio-prometheus-scrape: 'true'
+    podMetricsEndpoints:
+    - port: http-envoy-prom
+      path: /stats/prometheus
+      interval: 15s
+grafana:
+  enabled: true
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+    datasources:
+      enabled: true
+  grafana.ini:
+    server:
+      domain: j64manager-grafana.dev.kube
+      root_url: https://j64manager-grafana.dev.kube
+      serve_from_sub_path: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  admin:
+    existingSecret: grafana-admin-credentials
+    userKey: admin-user
+    passwordKey: admin-password
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 472
+    fsGroup: 472
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+kube-state-metrics:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: true
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+kubelet:
+  serviceMonitor:
+    enabled: true
+    kubelet: true
+    honorTimestamps: false
+    trackTimestampsStaleness: false
+    cAdvisor: true
+    cAdvisorInterval: 15s
+    cAdvisorTimeout: 7s

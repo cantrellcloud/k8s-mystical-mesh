@@ -1,0 +1,95 @@
+global:
+  imageRegistry: "altregistry.dev.kube:8443/library"
+  imagePullSecrets: []
+  defaultStorageClass: "tkg-work-storage-latebinding"
+  storageClass: "tkg-work-storage-latebinding"
+  security:
+    allowInsecureImages: true
+
+image:
+  tag: 7.0.15-debian-12-r2
+  pullPolicy: IfNotPresent
+
+architecture: replicaset
+arbiter:
+  enabled: false
+replicaCount: 1
+replicaSetName: rsRocketchat
+useStatefulSet: true
+
+externalAccess:
+  enabled: true
+  service:
+    type: LoadBalancer
+    port: 27017
+    loadBalancerIPs: ["10.0.4.76"]
+    publicNames: ["dc1-mongo0.dev.kube"]
+
+serviceAccount:
+  create: true
+automountServiceAccountToken: true
+rbac:
+  create: true
+
+auth:
+  enabled: true
+  rootUser: rootadmin
+  existingSecret: "mongodb-preprod-credentials"
+
+service:
+  nameOverride: "mongo0-svc"
+
+hostAliases:
+  - ip: "10.0.3.221"
+    hostnames:
+      - "kuberegistry"
+      - "kuberegistry.dev.kube"
+      - "altregistry"
+      - "altregistry.dev.kube"
+  - ip: "10.0.4.76"
+    hostnames:
+      - "dc1-mongo0.dev.kube"
+  - ip: "10.0.4.86"
+    hostnames:
+      - "dc2-mongo1.dev.kube"
+  - ip: "10.0.4.96"
+    hostnames:
+      - "dc3-mongo2.dev.kube"
+
+resources:
+  requests:
+    cpu: 2
+    memory: 512Mi
+  limits:
+    cpu: 3
+    memory: 1024Mi
+
+initdbScripts:
+  create_rocketchat_users.js: |
+    use admin
+    db.createUser({
+      user: "rktadmin",
+      pwd: "UzFhaXJhcm9zZTg5NQod",
+      roles: [{ role: "dbOwner", db: "rocketchat" }, { role: "readWrite", db: "local" }, { role: "dbAdmin", db: "rocketchat" }, { role: "readWrite", db: "rocketchat"}]
+    });
+    db.createUser({
+      user: "rktservice",
+      pwd: "zetvoYM6n45vxq2m2iGw",
+      roles: [{ role: "dbOwner", db: "rocketchat" }, { role: "readWrite", db: "local" }, { role: "dbAdmin", db: "rocketchat" }, { role: "readWrite", db: "rocketchat"}]
+    });
+
+replicaSetConfigurationSettings:
+  enabled: true
+  runMode: primary
+  configuration:
+    _id: rsRocketchat
+    members:
+      - _id: 0
+        host:  dc1-mongo0.dev.kube:27017
+        priority: 3
+      - _id: 1
+        host:  dc2-mongo1.dev.kube:27017
+        priority: 2
+      - _id: 2
+        host:  dc3-mongo2.dev.kube:27017
+        priority: 1

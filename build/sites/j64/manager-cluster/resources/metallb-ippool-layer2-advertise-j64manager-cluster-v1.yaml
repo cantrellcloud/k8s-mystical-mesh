@@ -1,0 +1,25 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: metallb-j64manager-cluster-ippool
+  namespace: metallb-system
+spec:
+  addresses:
+  - 10.0.4.30-10.0.4.39
+  autoAssign: false
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: metallb-j64manager-cluster-segment1-ippool
+  namespace: metallb-system
+spec:
+  addresses:
+  - 1.0.0.201 - 1.0.0.210
+  autoAssign: false
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: metallb-l2
+  namespace: metallb-system

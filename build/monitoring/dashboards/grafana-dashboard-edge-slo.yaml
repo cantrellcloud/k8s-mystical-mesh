@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-edge-slo
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  edge-slo.json: |
+    {
+      "title": "Edge Network SLOs (Contour / MetalLB / NATS)",
+      "uid": "edge-slo",
+      "schemaVersion": 39,
+      "version": 1,
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "cluster",
+            "type": "query",
+            "datasource": "$datasource",
+            "label": "Cluster",
+            "query": "label_values(metallb_bgp_session_up, cluster)",
+            "includeAll": false,
+            "multi": false
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "gauge",
+          "title": "MetalLB BGP Sessions Up (%)",
+          "id": 20,
+          "datasource": "$datasource",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "expr": "100 * sum(metallb_bgp_session_up{cluster=~\"$cluster\"}) / count(metallb_bgp_session_up{cluster=~\"$cluster\"})",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "MetalLB BGP Flaps (changes per 5m)",
+          "id": 21,
+          "datasource": "$datasource",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "expr": "changes(metallb_bgp_session_up{cluster=~\"$cluster\"}[5m])",
+              "legendFormat": "{{peer}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Contour Envoy Active Connections",
+          "id": 22,
+          "datasource": "$datasource",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "connections"
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "expr": "sum by (cluster) (envoy_http_downstream_cx_active{cluster=~\"$cluster\"})",
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    }

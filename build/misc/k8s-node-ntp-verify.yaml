@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ntp-audit
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: ntp-audit
+  template:
+    metadata:
+      labels:
+        app: ntp-audit
+    spec:
+      hostPID: true
+      hostNetwork: true
+      tolerations:
+      - operator: "Exists"
+      containers:
+      - name: audit
+        image: altregistry.dev.kube:8443/library/ultimate-k8s-toolbox:v1.0.1
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          runAsGroup: 0
+          allowPrivilegeEscalation: true
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        command: ["/bin/bash","-lc"]
+        args:
+          - |
+            set -euo pipefail
+            while true; do
+              echo "===== ${NODE_NAME}  $(date -Is) ====="
+              nsenter -t 1 -m -u -i -n -p -- systemctl is-active systemd-timesyncd || true
+              nsenter -t 1 -m -u -i -n -p -- timedatectl show -p NTP -p NTPSynchronized -p ServerName -p PollIntervalUSec || true
+              nsenter -t 1 -m -u -i -n -p -- timedatectl timesync-status || true
+              echo
+              sleep 300
+            done

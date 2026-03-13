@@ -1,0 +1,38 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kiali-cert
+  namespace: istio-system
+spec:
+  secretName: kiali-tls
+  issuerRef:
+    name: preprod-ca-clusterissuer
+    kind: ClusterIssuer
+  commonName: j64manager-kiali.dev.kube
+  dnsNames:
+    - j64manager-kiali.dev.kube
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kiali-ingress
+  namespace: istio-system
+  annotations:
+    projectcontour.io/force-ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - j64manager-kiali.dev.kube
+    secretName: kiali-tls
+  rules:
+  - host: j64manager-kiali.dev.kube
+    http:
+      paths:
+      - pathType: Prefix
+        path: /kiali
+        backend:
+          service:
+            name: kiali
+            port:
+              number: 20001
+  ingressClassName: contour

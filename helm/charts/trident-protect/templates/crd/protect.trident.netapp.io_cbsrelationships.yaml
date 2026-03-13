@@ -1,0 +1,271 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.3
+  name: cbsrelationships.protect.trident.netapp.io
+spec:
+  group: protect.trident.netapp.io
+  names:
+    kind: CBSRelationship
+    listKind: CBSRelationshipList
+    plural: cbsrelationships
+    shortNames:
+    - cbsr
+    singular: cbsrelationship
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .status.error
+      name: Error
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: CBSRelationship is the Schema for the cbsrelationships API (only
+          available with NetApp Backup and Recovery service)
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: CBSRelationshipSpec defines the desired state of CBSRelationship
+            properties:
+              applicationRef:
+                description: ApplicationRef is the name of the application that this
+                  CBSRelationship belongs to
+                minLength: 1
+                type: string
+              appvaultRef:
+                description: AppvaultRef is the reference to the AppVault that this
+                  backup belongs to (required for cloud backup)
+                type: string
+              cloudBackup:
+                description: CloudBackup indicates whether a cloud backup relationship
+                  will be created or not
+                type: boolean
+              pvName:
+                description: PVName is the name of the PV to backup
+                maxLength: 253
+                minLength: 1
+                type: string
+              replication:
+                description: Replication indicates whether a replication relationship
+                  will be created or not
+                type: boolean
+              replicationTarget:
+                description: ReplicationTarget defines the target information that
+                  will be used for replication volumes
+                properties:
+                  aggregates:
+                    description: |-
+                      Aggregates is a list of the aggregates on the target SVM.
+                      If no aggregate is provided the default aggregate for the SVM will be used
+                    items:
+                      type: string
+                    type: array
+                  prefix:
+                    description: Prefix is the prefix for the replication volume name
+                    type: string
+                  suffix:
+                    description: Suffix is the suffix for the replication volume name
+                    type: string
+                  svm:
+                    description: SVM is the name of the target SVM that exists on
+                      the target system
+                    type: string
+                  systemID:
+                    description: SystemID is the ID for the target system where replications
+                      will be stored
+                    type: string
+                  systemName:
+                    description: SystemName is the name of the target system where
+                      replications will be stored
+                    type: string
+                required:
+                - svm
+                - systemID
+                - systemName
+                type: object
+            required:
+            - applicationRef
+            - pvName
+            type: object
+          status:
+            description: CBSRelationshipStatus shows information about the volume
+              and the status of any relationships
+            properties:
+              aggregates:
+                description: Aggregates is a list of aggregates that the PV belongs
+                  to
+                items:
+                  type: string
+                type: array
+              bucketName:
+                description: BucketName is the name of the bucket where the backup
+                  is stored
+                type: string
+              cbsVolumeID:
+                description: CBSVolumeID is the ID of the CBS volume to backup
+                type: string
+              cbsVolumeName:
+                description: CBSVolumeName is the name of the CBS volume to backup
+                type: string
+              cloudBackupRelationshipID:
+                description: CloudBackupRelationshipID is the ID of the cloud backup
+                  relationship
+                type: string
+              cloudBackupRelationshipState:
+                description: CloudBackupRelationshipState is the state of the cloud
+                  backup relationship
+                type: string
+              conditions:
+                description: Each Condition contains details for one aspect of the
+                  current state of the CBSRelationship.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              discoverVolumesJobID:
+                description: DiscoverVolumesJobID is the ID of the CBS discover volumes
+                  job
+                type: string
+              error:
+                description: Error indicates the most recent error that has occurred.
+                  The error may not be permanent, so progress may continue after temporarily
+                  seeing an error.
+                type: string
+              protectionJobID:
+                description: ProtectionJobID is the ID of the CBS protection job
+                type: string
+              replicationJobID:
+                description: ReplicationJobID is the ID of the CBS replication job
+                type: string
+              replicationRelationshipDestinationPath:
+                description: ReplicationRelationshipDestinationPath is the destination
+                  path of the replication relationship
+                type: string
+              replicationRelationshipID:
+                description: ReplicationRelationshipID is the ID of the replication
+                  relationship
+                type: string
+              replicationRelationshipState:
+                description: ReplicationRelationshipState is the state of the replication
+                  relationship
+                type: string
+              replicationSystemID:
+                description: ReplicationSystemID is the ID of the system that the
+                  PV belongs to
+                type: string
+              replicationVolumeID:
+                description: ReplicationVolumeID is the ID of the replication volume
+                type: string
+              replicationVolumeName:
+                description: ReplicationVolumeName is the name of the replication
+                  volume
+                type: string
+              replicationVolumeUniqueSuffix:
+                description: ReplicationVolumeUniqueSuffix is the unique suffix added
+                  to the replication volume name to make it unique
+                type: string
+              state:
+                description: State indicates a high level summary of the CBSRelationship's
+                  state
+                type: string
+              svm:
+                description: Svm is the name of the SVM that the PV belongs to
+                type: string
+              systemID:
+                description: SystemID is the ID of the system that the PV belongs
+                  to
+                type: string
+              systemName:
+                description: SystemName is the name of the system that the PV belongs
+                  to
+                type: string
+              systemProtectionJobID:
+                description: SystemProtectionJobID is the ID of the system protection
+                  job
+                type: string
+            required:
+            - state
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

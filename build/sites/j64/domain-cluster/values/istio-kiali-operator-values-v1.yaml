@@ -1,0 +1,24 @@
+image:
+  repo: altregistry.dev.kube:8443/library/kiali/kiali-operator
+  tag: v2.13.0
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# Deployment options for the operator pod.
+extraLabels: {}
+nodeSelector: {}
+podAnnotations: {}
+podLabels: {}
+env: []
+tolerations: []
+resources:
+  requests:
+    cpu: "100m"
+    memory: "64Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+affinity: {}
+replicaCount: 1
+priorityClassName: ""
+securityContext: {}

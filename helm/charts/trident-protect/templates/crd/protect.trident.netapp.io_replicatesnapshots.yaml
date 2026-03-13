@@ -1,0 +1,237 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.3
+  name: replicatesnapshots.protect.trident.netapp.io
+spec:
+  group: protect.trident.netapp.io
+  names:
+    kind: ReplicateSnapshot
+    listKind: ReplicateSnapshotList
+    plural: replicatesnapshots
+    singular: replicatesnapshot
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The ReclaimPolicy for the ReplicateSnapshot
+      jsonPath: .spec.reclaimPolicy
+      name: Reclaim Policy
+      type: string
+    - description: The current state of the ReplicateSnapshot
+      jsonPath: .status.state
+      name: State
+      type: string
+    - description: The error associated with the ReplicateSnapshot
+      jsonPath: .status.error
+      name: Error
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: ReplicateSnapshot is the Schema for the replicatesnapshots API.
+          (only available with NetApp Backup and Recovery service)
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ReplicateSnapshotSpec defines the desired state of ReplicateSnapshot.
+            properties:
+              appVaultTargetsRef:
+                description: AppVaultTargetsRef is the reference to the AppVaultTargets
+                  CR to use (only available with NetApp Backup and Recovery service)
+                minLength: 1
+                type: string
+              applicationRef:
+                description: ApplicationRef is the reference to the application whose
+                  snapshot is to be replicated.
+                minLength: 1
+                type: string
+              reclaimPolicy:
+                default: Retain
+                description: |-
+                  ReclaimPolicy defines what happens to a replicated snapshot when a deletion is requested.
+                  Valid options are Retain (default), Delete.
+                enum:
+                - Retain
+                - Delete
+                type: string
+              snapshotRef:
+                description: SnapshotRef is the reference to the snapshot to be replicated.
+                minLength: 1
+                type: string
+            required:
+            - appVaultTargetsRef
+            - applicationRef
+            - snapshotRef
+            type: object
+          status:
+            description: ReplicateSnapshotStatus defines the observed state of ReplicateSnapshot.
+            properties:
+              appArchivePath:
+                description: AppArchivePath is the path where the replicated contents
+                  was archived in the AppVault.
+                type: string
+              appVaultRef:
+                description: AppVaultRef is the reference to the AppVault where the
+                  replicated snapshot contents are stored.
+                type: string
+              completionTimestamp:
+                description: |-
+                  CompletionTimestamp records the time the ReplicateSnapshot completed.
+                  The server's time is used for CompletionTimestamps
+                format: date-time
+                nullable: true
+                type: string
+              conditions:
+                description: Each Condition contains details for one aspect of the
+                  current state of the Backup.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              destinationSystemID:
+                description: DestinationSystemID is the ID of the destination system.
+                type: string
+              destinationSystemName:
+                description: DestinationSystemName is the name of the destination
+                  working environment.
+                type: string
+              error:
+                description: Error indicates the most recent error that has occurred.
+                  The error may not be permanent, so progress may continue after temporarily
+                  seeing an error.
+                type: string
+              pvMapping:
+                additionalProperties:
+                  properties:
+                    cbsDestinationVolumeID:
+                      description: CBSDestinationVolumeID is the ID of the destination
+                        volume.
+                      type: string
+                    cbsDestinationVolumeName:
+                      description: CBSDestinationVolumeName is the name of the destination
+                        volume.
+                      type: string
+                    cbsReplicationID:
+                      description: CBSRelationshipID is the ID of the replication
+                        job.
+                      type: string
+                    cbsSnapshotID:
+                      description: CBSSnapshotID is the ID of the snapshot.
+                      type: string
+                    cbsSnapshotName:
+                      description: CBSSnapshotName is the name of the snapshot.
+                      type: string
+                    cbsSourceVolumeID:
+                      description: CBSSourceVolumeID is the ID of the volume.
+                      type: string
+                    cbsSourceVolumeName:
+                      description: CBSSourceVolumeName is the name of the volume.
+                      type: string
+                    cbsSourceWorkingEnvID:
+                      description: CBSSourceWorkingEnvID is the ID of the source working
+                        environment.
+                      type: string
+                    cbsSourceWorkingEnvName:
+                      description: CBSSourceWorkingEnvName is the name of the source
+                        working environment.
+                      type: string
+                    pvcName:
+                      description: PVCName is the name of the PVC.
+                      type: string
+                    pvcNamespace:
+                      description: PVCNamespace is the namespace of the PVC.
+                      type: string
+                  type: object
+                description: PVMapping is a mapping of the PV name to replication
+                  info.
+                type: object
+              replicationJobID:
+                description: ReplicationJobID is the ID of the job that was created
+                  to replicate the snapshot(s).
+                type: string
+              state:
+                description: State indicates a high level summary of the ReplicateSnapshot's
+                  state
+                type: string
+            required:
+            - state
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

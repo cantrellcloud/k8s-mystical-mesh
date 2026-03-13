@@ -1,0 +1,384 @@
+{{- $tls := fromYaml (include "tridentprotect.gen-certs" .) }}
+{{- $caBundle := include "tridentprotect.gen-ca-bundle" (list $tls.caCert .) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.webhook.tlsSecretName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tridentprotect.labels" . | nindent 4 }}
+type: kubernetes.io/tls
+data:
+  ca.crt: {{ $tls.caCert }}
+  tls.crt: {{ $tls.clientCert }}
+  tls.key: {{ $tls.clientKey }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ .Values.namePrefix }}-validating-webhook-configurations
+  labels:
+    {{- include "tridentprotect.labels" . | nindent 4 }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /application-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vapplication.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - applications
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /appvault-access-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vappvault-access.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - appmirrorrelationships
+    - backupinplacerestores
+    - backuprestores
+    - exechookruns
+    - kopiavolumebackups
+    - kopiavolumerestores
+    - resourcebackups
+    - resourcedeletes
+    - resourcerestores
+    - resticvolumebackups
+    - resticvolumerestores
+    - shutdownsnapshots
+    - snapshotinplacerestores
+    - snapshotrestores
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /appvault-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vappvault-creation.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - appvaults
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /autosupportbundle-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vautosupportbundle-creation.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - autosupportbundles
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /autosupportbundleschedule-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vautosupportbundleschedule-creation.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - autosupportbundleschedules
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /restore-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vrestore-creation.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - appmirrorrelationships
+    - backupinplacerestores
+    - snapshotinplacerestores
+    - backuprestores
+    - snapshotrestores
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /non-tp-namespace-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vcr-namespace-creation.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - applications
+    - appmirrorrelationships
+    - appmirrorupdates
+    - backupinplacerestores
+    - backuprestores
+    - exechooks
+    - exechooksruns
+    - kopiavolumebackups
+    - kopiavolumerestores
+    - resourcebackups
+    - resourcedeletes
+    - resourcerestores
+    - resourceviewers
+    - resticvolumebackups
+    - resticvolumerestores
+    - shutdownsnapshots
+    - snapshotinplacerestores
+    - snapshotrestores
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /schedule-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vschedule-creation.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - schedules
+  sideEffects: None
+- admissionReviewVersions:
+    - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /appvaulttargets-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vappvaulttargets-creation.protect.trident.netapp.io
+  rules:
+    - apiGroups:
+        - protect.trident.netapp.io
+      apiVersions:
+        - v1
+      operations:
+        - CREATE
+        - UPDATE
+      resources:
+        - appvaulttargets
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /cbsrelationship-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vcbsrelationship-creation-validator.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - cbsrelationships
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /replicatesnapshot-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vreplicatesnapshot-creation-validator.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - replicatesnapshots
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /replicatesnapshotrestore-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vreplicatesnapshotrestore-creation-validator.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - replicatesnapshotrestores
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /cbsvolumebackup-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vcbsvolumebackup-creation-validator.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - cbsvolumebackups
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /cbsvolumerestore-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vcbsvolumerestore-creation-validator.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - cbsvolumerestores
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /backup-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vbackup-creation-validator.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - backups
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: tp-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /snapshot-creation-validator
+    caBundle: {{ $caBundle }}
+  failurePolicy: Fail
+  name: vsnapshot-creation-validator.protect.trident.netapp.io
+  rules:
+  - apiGroups:
+    - protect.trident.netapp.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - snapshots
+  sideEffects: None
+---

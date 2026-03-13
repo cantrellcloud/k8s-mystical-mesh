@@ -1,0 +1,117 @@
+global:
+  rbac:
+    create: true
+  imageRegistry: altregistry.dev.kube:8443/library
+  imagePullSecrets: []
+crds:
+  enabled: true
+nameOverride: j64domain
+fullnameOverride: j64domain
+prometheusOperator:
+  enabled: true
+  fullnameOverride: j64domain
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+grafana:
+  enabled: false
+alertmanager:
+  enabled: false
+prometheus:
+  enabled: true
+  agentMode: true
+  prometheusSpec:
+    replicas: 1
+    #prometheusExternalLabelName: "prometheus"
+    #replicaExternalLabelName: "j64domain"
+    #externalLabels:
+    #  cluster: "j64domain"
+    enableRemoteWriteReceiver: false
+    additionalScrapeConfigs:
+    - job_name: kubernetes
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_pod_annotation_prometheus_io_scrape
+        action: keep
+        regex: true
+      - target_label: cluster
+        replacement: "j64domain"
+    scrapeInterval: 15s
+    scrapeTimeout: 10s
+    evaluationInterval: 15s
+    remoteWrite:
+    - name: "j64domain"
+      url: https://j64manager-prometheus-rw.dev.kube/api/v1/write
+      messageVersion: V1.0
+      tlsConfig:
+        ca:
+          secret:
+            name: preprod-ca-bundle
+            key: ca.crt
+        cert:
+          secret:
+            name: prom-remote-write-client-tls
+            key: tls.crt
+        keySecret:
+          name: prom-remote-write-client-tls
+          key: tls.key
+        serverName: j64manager-prometheus-rw.dev.kube
+        insecureSkipVerify: false
+      queueConfig:
+        capacity: 7500
+        minShards: 1
+        maxShards: 30
+        maxSamplesPerSend: 2000
+        batchSendDeadline: 10s
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: tkg-work-storage-iscsi-latebinding
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 120Gi
+    resources:
+      requests:
+        cpu: 300m
+        memory: 1Gi
+      limits:
+      # cpu: 
+        memory: 2Gi
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: true
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+kube-state-metrics:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+kubelet:
+  serviceMonitor:
+    enabled: true
+    kubelet: true
+    honorTimestamps: false
+    trackTimestampsStaleness: false
+    cAdvisor: true
+    cAdvisorInterval: 15s
+    cAdvisorTimeout: 7s

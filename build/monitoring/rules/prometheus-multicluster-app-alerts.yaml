@@ -1,0 +1,81 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: prom-rules-multicluster-app
+  namespace: monitoring
+  labels:
+    release: prometheus
+    role: application-alerts
+spec:
+  groups:
+  - name: mongodb-replication.rules
+    rules:
+    - alert: MongoReplicationLagHigh
+      expr: max by (cluster, replicaset) (mongodb_mongod_replset_member_replication_lag{app_kubernetes_io_instance="rocketchat"}) > 10
+      for: 5m
+      labels:
+        severity: warning
+        service: mongodb
+      annotations:
+        summary: "MongoDB replication lag high (cluster={{ $labels.cluster }}, rs={{ $labels.replicaset }})"
+        description: "Replication lag for MongoDB replicaset serving Rocket.Chat exceeds 10s for more than 5 minutes."
+    - alert: MongoReplicationLagCritical
+      expr: max by (cluster, replicaset) (mongodb_mongod_replset_member_replication_lag{app_kubernetes_io_instance="rocketchat"}) > 60
+      for: 5m
+      labels:
+        severity: critical
+        service: mongodb
+      annotations:
+        summary: "MongoDB replication lag CRITICAL (cluster={{ $labels.cluster }}, rs={{ $labels.replicaset }})"
+        description: "Replication lag for MongoDB replicaset serving Rocket.Chat exceeds 60s for more than 5 minutes."
+  - name: rocketchat-api.rules
+    rules:
+    - alert: RocketChatApiLatencyHigh
+      expr: |
+        histogram_quantile(
+          0.95,
+          sum by (le, cluster) (
+            rate(http_request_duration_seconds_bucket{job="rocketchat",route=~"/api/.*"}[5m])
+          )
+        ) > 0.5
+      for: 10m
+      labels:
+        severity: warning
+        service: rocketchat
+      annotations:
+        summary: "Rocket.Chat API p95 latency high (cluster={{ $labels.cluster }})"
+        description: "Rocket.Chat API p95 latency is above 500ms for 10 minutes."
+    - alert: RocketChatApiErrorRateHigh
+      expr: |
+        (
+          sum(rate(http_requests_total{job="rocketchat",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{job="rocketchat"}[5m]))
+        ) > 0.01
+      for: 5m
+      labels:
+        severity: critical
+        service: rocketchat
+      annotations:
+        summary: "Rocket.Chat API 5xx error rate high (cluster={{ $labels.cluster }})"
+        description: "Rocket.Chat API 5xx error rate is above 1% for 5 minutes."
+  - name: metallb-bgp.rules
+    rules:
+    - alert: MetalLBBgpSessionDown
+      expr: metallb_bgp_session_up == 0
+      for: 1m
+      labels:
+        severity: critical
+        service: metallb
+      annotations:
+        summary: "MetalLB BGP session DOWN (cluster={{ $labels.cluster }}, peer={{ $labels.peer }})"
+        description: "MetalLB BGP session is down for more than 1 minute."
+    - alert: MetalLBBgpSessionFlapping
+      expr: changes(metallb_bgp_session_up[5m]) > 4
+      for: 5m
+      labels:
+        severity: warning
+        service: metallb
+      annotations:
+        summary: "MetalLB BGP session flapping (cluster={{ $labels.cluster }}, peer={{ $labels.peer }})"
+        description: "MetalLB BGP session state changed more than 4 times in 5 minutes, indicating flapping."

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keycloak-entra-link
+  namespace: keycloak
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: keycloak-entra-link
+  namespace: keycloak
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "secrets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: keycloak-entra-link
+  namespace: keycloak
+subjects:
+  - kind: ServiceAccount
+    name: keycloak-entra-link
+    namespace: keycloak
+roleRef:
+  kind: Role
+  name: keycloak-entra-link
+  apiGroup: rbac.authorization.k8s.io

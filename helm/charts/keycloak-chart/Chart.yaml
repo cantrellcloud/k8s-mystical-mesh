@@ -1,0 +1,29 @@
+annotations:
+  dhi.docker.com/helm.images: |
+    - dhi/keycloak:26.5.5-debian13@sha256:e628364d2e463d5082aedf4e41ed55aa2589a95231bf2d90213ce038148b4115
+    - dhi/busybox:1.37.0-debian13@sha256:ee1f963dd3d57a59ae3f99fca81b06d19d1bef7c8289ff84001e0c65f39a8464
+apiVersion: v2
+appVersion: 26.5.5
+description: Docker Hardened Images Helm chart for Keycloak
+home: https://dhi.io
+icon: https://www.keycloak.org/resources/images/keycloak_logo_200px.svg
+keywords:
+- sso
+- idm
+- openid connect
+- saml
+- kerberos
+- oauth
+- ldap
+- keycloakx
+- quarkus
+maintainers:
+- email: dhi@docker.com
+  name: Docker Hardened Images
+  url: https://dhi.io
+- name: Upstream Official Project
+  url: https://github.com/codecentric/helm-charts
+name: keycloak-chart
+sources:
+- https://github.com/docker-hardened-images/definitions
+version: 7.1.9

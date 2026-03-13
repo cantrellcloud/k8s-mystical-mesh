@@ -1,0 +1,3 @@
+Pre-Prod IP Kubernetes Matrix can be found on preprod's Confluence at the following URL:
+
+https://confluence.dev.local/spaces/LYNX/pages/346980374/Pre-Prod+IP+Kubernetes+Matrix
