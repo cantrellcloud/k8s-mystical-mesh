@@ -11,13 +11,13 @@ echo
 echo Exporting variables...
 export SITE="${1}"
 export CLUSTER="${2}"
-export NAMESPACE="preprod-ingress"
+export NAMESPACE="hypermute-ingress"
 export OPTIONS="/home/adminlocal/k8s-mystical-mesh/build/sites/${SITE}/${CLUSTER}-cluster"
 export PACKAGE="/home/adminlocal/k8s-mystical-mesh/helm/packages"
-export RELEASE="preprod"
+export RELEASE="hypermute"
 export CHART="contour-21.1.4.tgz"
-export VALUES="contour-values-v5.yaml"
-export RESOURCES="contour-resources-${CLUSTER}-cluster-v1.yaml"
+export VALUES="hmingress-values-v4.yaml"
+export RESOURCES="hmingress-resources-${CLUSTER}-cluster-v1.yaml"
 
 echo
 echo ---
@@ -33,7 +33,7 @@ echo
 echo ---
 echo
 echo "Installing Contour Ingress..."
-helm upgrade --install "${RELEASE}" "${PACKAGE}/${CHART}" --namespace "${NAMESPACE}" --values="${OPTIONS}/values/${VALUES}"
+helm upgrade       --install "${RELEASE}" "${PACKAGE}/${CHART}"       --namespace "${NAMESPACE}"       --values="${OPTIONS}/values/${VALUES}"
 
 echo
 echo ---
