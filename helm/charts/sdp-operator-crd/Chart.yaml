@@ -1,6 +1,0 @@
-apiVersion: v2
-appVersion: 0.5.0
-description: Helm chart for the Appgate SDP Operator CRD
-name: sdp-operator-crd
-type: application
-version: 0.5.0
